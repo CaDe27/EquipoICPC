@@ -1,91 +1,83 @@
-// { Driver Code Starts
-#include<iostream>
-#include <cmath>
+#include <iostream>
+#include <algorithm>
+#include <climits>
+
+#define loop(i, a, b) for(int i = a; i < b; ++i)
+
 using namespace std;
 
-int *constructST(int arr[],int n);
+const int maxN = 100000;
+int n;
 
-
-int RMQ(int st[] , int n, int a, int b);
-int main()
-{
-    int T;
-    cin>>T;
-    while(T--)
-    {
-        int N;
-        cin>>N;
-        int A[N];
-        for(int i=0;i<N;i++)
-            cin>>A[i];
-        int Q;
-        cin>>Q;
-
-
-
-        int *segTree = constructST(A,N);
-
-        for(int i=0;i<Q;i++)
-        {
-            int start,e;
-            
-            cin>>start>>e;
-            if(start>e)
-            {
-                swap(start,e);
-            }
-            cout<<RMQ(segTree,N,start,e)<<" ";
-        }
-        cout<<endl;
+struct SegmentTree{
+    int left[maxN+1], right[maxN+1], funct[maxN+1], delta[maxN+1]; 
+    
+    //if instead of incrementing, you need other aggregate update function, 
+    // change propagate, update and incrementI and queryI
+    void init(int i, int a, int b){
+        left[i] = a;
+        right[i] = b;
+        if(a==b) return;
+        int m = (a+b)/2;
+        init(2*i, a, m);
+        init(2*i+1, m+1,b);
     }
-}
-// } Driver Code Ends
-/*This is a function problem.You only need to complete the function given below*/
-/* The functions which 
-builds the segment tree */
-int getMid(int a, int b){return a+(b-a)/2;}
-int constructSTSub(int arr[],int *st,int si,int ss,int se){
-    if(se == ss)
-        st[si] = arr[ss];
-    else{
-        int mid = getMid(ss, se);
-        st[si] = min(constructSTSub(arr, st, 2*si+1, ss, mid),
-                     constructSTSub(arr, st, 2*si+2, mid+1, se));            
+    
+    SegmentTree(int n){
+        init(1, 1, n);
     }
-	return st[si]; 
-}
 
-int *constructST(int arr[],int n)
-{
-  int x = (int)ceil(log2(n));
-  int maxSize = (int)pow(2, x+1) - 1;
-  int *st = new int[maxSize]; 
-  constructSTSub(arr, st, 0, 0, n-1);
-  return st;
-}
-/* The functions returns the
- min element in the range
- from a and b */
-int RMQSub(int *st, int si, int ss, int se, int qs, int qe){
-    if(qs<=ss && se<=qe)
-        return st[si];
-    else if(se<qs || qe<ss)
-        return INT_MAX;
-    else{
-        int mid = getMid(ss, se);
-        return min(RMQSub(st, 2*si+1, ss, mid, qs, qe),
-                    RMQSub(st, 2*si+2, mid+1, se, qs, qe));
+    void propagate(int i){
+        delta[2*i] += delta[i];
+        delta[2*i + 1] += delta[i];
+        delta[i] = 0;
     }
-}
-/* The functions returns the
- min element in the range
- from a and b */
-int RMQ(int *st , int n, int a, int b)
-{
-	if(a > b)
-        swap(a,b);
+
+    void update(int i){
+        //its now implemented with min
+        funct[i] =  min(funct[2*i] + delta[2*i], funct[2*i+1] + delta[2*i+1]);
+    }
+
+    void incrementI(int i, int a, int b, int val){
+        if(b < left[i] || right[i] < a)
+            return;
         
-    if(a > n-1 || b < 0)
-        return -1;
-    return RMQSub(st, 0, 0, n-1,a, b);
+        if( a<=left[i] && right[i]<=b ){
+            delta[i] += val;
+            return;
+        }
+        
+        propagate(i);
+        incrementI(2*i, a, b, val);
+        incrementI(2*i+1, a, b, val);
+        update(i);
+        
+    }
+
+    void increment(int a, int b, int val){
+        incrementI(1, a, b, val);
+    }
+
+    int queryI(int i, int a, int b){
+        if(b < left[i] || right[i] < a)
+            return INT_MAX;
+        
+        if(a <= left[i] && right[i] <= b)
+            return funct[i] + delta[i];
+        
+        propagate(i);
+        int leftQ =  queryI(2*i, a, b);
+        int rightQ = queryI(2*i+1, a, b);
+        update(i);
+        return min(leftQ, rightQ);
+    }
+
+    int query(int a, int b){
+        return queryI(1, a, b);
+    }
+
+};
+
+int main(){
+    SegmentTree a(10);
 }
